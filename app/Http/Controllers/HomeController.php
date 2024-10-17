@@ -23,6 +23,8 @@ class HomeController extends Controller
      */
     public function index()
     {
-        return view('home');
+        $invoices = auth()->user()->invoices;
+
+        return view('home', compact('invoices'));
     }
 }
