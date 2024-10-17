@@ -30,19 +30,43 @@ class GenerateInvoicesJob implements ShouldQueue
     {
         $users = User::all();
 
-        foreach ($users as $user) {
-            Invoice::create([
-                'user_id' => $user->id,
-                'invoice_number' => str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT),
-                'total_amount' => 250.50,
-                'due_date' => Carbon::now()->addDays(1),
-                'status' => 'Pending',
-                'transaction_count' => 0,
-                'amount_paid' => 0,
-                'remaining_balance' => 250.50,
-                'late_fee' => 0,
-                'interest' => 0,
-            ]);
+        foreach($users as $user){
+            $previousInvoice = Invoice::where('user_id', $user->id)->orderBy('created_at', 'desc')->first();
+
+            if($previousInvoice && Carbon::now()->greaterThan($previousInvoice->due_date)){
+                if ($previousInvoice->remaining_balance > 0) {
+                    $lateFee = 10;
+                    $interest = $previousInvoice->remaining_balance * 0.10;
+
+                    $totalAmount = 250.50 + $previousInvoice->remaining_balance + $lateFee + $interest;
+
+                    Invoice::create([
+                        'user_id' => $user->id,
+                        'invoice_number' => str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT),
+                        'total_amount' => $totalAmount,
+                        'due_date' => Carbon::now()->addDays(1),
+                        'status' => 'Pending',
+                        'transaction_count' => 0,
+                        'amount_paid' => 0,
+                        'remaining_balance' => $totalAmount,
+                        'late_fee' => $lateFee,
+                        'interest' => $interest,
+                    ]);
+                }
+            }else if(!$previousInvoice){
+                Invoice::create([
+                    'user_id' => $user->id,
+                    'invoice_number' => str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT),
+                    'total_amount' => 250.50,
+                    'due_date' => Carbon::now()->addDays(1),
+                    'status' => 'Pending',
+                    'transaction_count' => 0,
+                    'amount_paid' => 0,
+                    'remaining_balance' => 250.50,
+                    'late_fee' => 0,
+                    'interest' => 0,
+                ]);
+            }
         }
     }
 }
